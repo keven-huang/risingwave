@@ -28,7 +28,6 @@ pub struct StreamRowIdGen {
     row_id_index: usize,
     custom_distribution: bool,
 }
-
 impl StreamRowIdGen {
     pub fn new(input: PlanRef, row_id_index: usize) -> Self {
         if input.append_only() {
@@ -55,6 +54,7 @@ impl StreamRowIdGen {
     ) -> StreamRowIdGen {
         let custom_distribution = distribution.is_some();
         let dist = distribution.unwrap_or(input.distribution().clone());
+
         let base = PlanBase::new_stream(
             input.ctx(),
             input.schema().clone(),

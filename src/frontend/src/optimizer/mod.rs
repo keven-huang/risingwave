@@ -53,6 +53,7 @@ use risingwave_common::util::column_index_mapping::ColIndexMapping;
 use risingwave_common::util::iter_util::ZipEqDebug;
 use risingwave_connector::sink::catalog::SinkFormatDesc;
 use risingwave_pb::catalog::WatermarkDesc;
+use risingwave_sqlparser::ast::ObjectName;
 
 use self::heuristic_optimizer::ApplyOrder;
 use self::plan_node::generic::{self, PhysicalPlanRef};
@@ -536,6 +537,7 @@ impl PlanRoot {
                 }
             };
 
+
             let dummy_source_node = LogicalSource::new(
                 None,
                 columns.clone(),
@@ -562,6 +564,7 @@ impl PlanRoot {
             })
             .into()
         } else {
+
             let dml_node = inject_dml_node(
                 &columns,
                 append_only,
@@ -570,6 +573,7 @@ impl PlanRoot {
                 kind,
                 column_descs,
             )?;
+
 
             StreamUnion::new(Union {
                 all: true,
@@ -614,7 +618,7 @@ impl PlanRoot {
             RequiredDist::ShardByKey(bitset)
         };
 
-        let stream_plan = inline_session_timezone_in_exprs(context, stream_plan)?;
+        // let stream_plan = inline_session_timezone_in_exprs(context, stream_plan)?;
 
         StreamMaterialize::create_for_table(
             stream_plan,
@@ -685,14 +689,18 @@ impl PlanRoot {
         db_name: String,
         sink_from_table_name: String,
         format_desc: Option<SinkFormatDesc>,
+        sink_into_table_name: Option<String>,
     ) -> Result<StreamSink> {
         let stream_plan = self.gen_optimized_stream_plan(emit_on_window_close)?;
+
+        println!("plan {:#?}", stream_plan);
 
         StreamSink::create(
             stream_plan,
             sink_name,
             db_name,
             sink_from_table_name,
+            sink_into_table_name,
             self.required_dist.clone(),
             self.required_order.clone(),
             self.out_fields.clone(),

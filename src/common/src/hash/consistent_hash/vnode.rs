@@ -20,7 +20,7 @@ use crate::hash::Crc32HashCode;
 use crate::row::{Row, RowExt};
 use crate::types::{DataType, ScalarRefImpl, Serial};
 use crate::util::hash_util::Crc32FastBuilder;
-use crate::util::row_id::extract_vnode_id_from_row_id;
+use crate::util::row_id::{extract_vnode_id_from_row_id, RowIdGenerator};
 
 /// Parallel unit is the minimal scheduling unit.
 // TODO: make it a newtype
@@ -119,7 +119,9 @@ impl VirtualNode {
         if let Ok(idx) = keys.iter().exactly_one()
             && let ArrayImpl::Serial(serial_array) = &**data_chunk.column_at(*idx)
         {
-            let fallback_row_id = Serial::from(rand::random::<i64>());
+            let fallback_row_id =
+                Serial::from(RowIdGenerator::new([VirtualNode::from_index(rand::random::<usize>() % VirtualNode::COUNT)]).next());
+
             return serial_array
                 .iter()
                 .map(|serial| extract_vnode_id_from_row_id(serial.unwrap_or(fallback_row_id).as_row_id()))

@@ -40,6 +40,7 @@ impl StreamUnion {
     pub fn new(logical: generic::Union<PlanRef>) -> Self {
         let inputs = &logical.inputs;
         let dist = inputs[0].distribution().clone();
+
         // assert!(inputs.iter().all(|input| *input.distribution() == dist));
         Self::new_with_dist(logical, dist)
     }
