@@ -853,8 +853,11 @@ fn fill_table_source(
         visit_fragment(fragment, |node_body| {
             if let NodeBody::Source(source_node) = node_body {
                 // TODO: Refactor using source id.
-                source_node.source_inner.as_mut().unwrap().source_id = source_id;
-                source_count += 1;
+
+                if let Some(source_inner) = source_node.source_inner.as_mut() {
+                    source_inner.source_id = source_id;
+                    source_count += 1;
+                }
             }
         });
     }
