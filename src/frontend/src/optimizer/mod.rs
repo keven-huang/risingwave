@@ -472,7 +472,6 @@ impl PlanRoot {
             Ok(node)
         }
 
-<<<<<<< HEAD
         fn inject_dml_node(
             columns: &[ColumnCatalog],
             append_only: bool,
@@ -539,7 +538,6 @@ impl PlanRoot {
                 }
             };
 
-
             let dummy_source_node = LogicalSource::new(
                 None,
                 columns.clone(),
@@ -559,7 +557,6 @@ impl PlanRoot {
                 column_descs,
             )?;
 
-
             StreamUnion::new(Union {
                 all: true,
                 inputs: vec![external_source_node, dml_node],
@@ -567,7 +564,6 @@ impl PlanRoot {
             })
             .into()
         } else {
-
             let dml_node = inject_dml_node(
                 &columns,
                 append_only,
@@ -576,7 +572,6 @@ impl PlanRoot {
                 kind,
                 column_descs,
             )?;
-
 
             StreamUnion::new(Union {
                 all: true,
@@ -621,7 +616,7 @@ impl PlanRoot {
             RequiredDist::ShardByKey(bitset)
         };
 
-        // let stream_plan = inline_session_timezone_in_exprs(context, stream_plan)?;
+        let stream_plan = inline_session_timezone_in_exprs(context, stream_plan)?;
 
         StreamMaterialize::create_for_table(
             stream_plan,

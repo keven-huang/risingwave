@@ -55,7 +55,6 @@ impl StreamRowIdGen {
     ) -> StreamRowIdGen {
         let custom_distribution = distribution.is_some();
         let dist = distribution.unwrap_or(input.distribution().clone());
-
         let base = PlanBase::new_stream(
             input.ctx(),
             input.schema().clone(),
