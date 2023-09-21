@@ -693,7 +693,7 @@ impl PlanRoot {
     ) -> Result<StreamSink> {
         let stream_plan = self.gen_optimized_stream_plan(emit_on_window_close)?;
 
-        println!("plan {:#?}", stream_plan);
+        // println!("plan {:#?}", stream_plan);
 
         StreamSink::create(
             stream_plan,
