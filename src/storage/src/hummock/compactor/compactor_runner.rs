@@ -152,7 +152,15 @@ impl CompactorRunner {
         let mut local_stats = StoreLocalStatistic::default();
 
         for table_info in sstable_infos {
-            let table = sstable_store.sstable(table_info, &mut local_stats).await?;
+            let table = match sstable_store.sstable(table_info, &mut local_stats).await {
+                Ok(t) => t,
+                Err(e) => {
+                    let mut sst = table_info.clone();
+                    sst.key_range = None;
+                    tracing::error!("failed to get sstable {:#?} ", sst);
+                    return Err(e);
+                }
+            };
             let mut range_tombstone_list = table.value().meta.monotonic_tombstone_events.clone();
             range_tombstone_list.iter_mut().for_each(|tombstone| {
                 if filter.should_delete(FullKey::from_user_key(
