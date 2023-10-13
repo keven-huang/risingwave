@@ -89,8 +89,6 @@ impl<F: LogStoreFactory> SinkExecutor<F> {
     ) -> StreamExecutorResult<Self> {
         let (log_reader, log_writer) = log_store_factory.build().await;
 
-        println!("param {:?}", sink_param);
-
         let sink = build_sink(sink_param.clone())?;
         let input_schema = columns
             .iter()
@@ -228,7 +226,14 @@ impl<F: LogStoreFactory> SinkExecutor<F> {
                                 // Force append-only by dropping UPDATE/DELETE messages. We do this when the
                                 // user forces the sink to be append-only while it is actually not based on
                                 // the frontend derivation result.
-                                delete_chunks.push(force_delete_only(c.clone()));
+                                let chunk1 = force_delete_only(c.clone());
+
+                                if chunk1.cardinality() == 0 {
+                                } else {
+                                    println!("chunk {:#?}", chunk1);
+                                    println!("chunk {}", chunk1.to_pretty());
+                                    delete_chunks.push(chunk1);
+                                }
                             }
                             insert_chunks.push(force_append_only(c));
                         }
@@ -562,6 +567,7 @@ mod test {
             format_desc: None,
             db_name: "test".into(),
             sink_from_name: "test".into(),
+            sink_into_name: None,
         };
 
         let sink_executor = SinkExecutor::new(

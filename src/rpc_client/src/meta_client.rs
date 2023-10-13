@@ -387,10 +387,12 @@ impl MetaClient {
         &self,
         sink: PbSink,
         graph: StreamFragmentGraph,
+        target_table_change: Option<ReplaceTableChange>,
     ) -> Result<(u32, CatalogVersion)> {
         let request = CreateSinkRequest {
             sink: Some(sink),
             fragment_graph: Some(graph),
+            target_table_change,
         };
 
         let resp = self.inner.create_sink(request).await?;
@@ -525,8 +527,17 @@ impl MetaClient {
         Ok(resp.version)
     }
 
-    pub async fn drop_sink(&self, sink_id: u32, cascade: bool) -> Result<CatalogVersion> {
-        let request = DropSinkRequest { sink_id, cascade };
+    pub async fn drop_sink(
+        &self,
+        sink_id: u32,
+        cascade: bool,
+        target_table_change: Option<ReplaceTableChange>,
+    ) -> Result<CatalogVersion> {
+        let request = DropSinkRequest {
+            sink_id,
+            cascade,
+            target_table_change,
+        };
         let resp = self.inner.drop_sink(request).await?;
         Ok(resp.version)
     }

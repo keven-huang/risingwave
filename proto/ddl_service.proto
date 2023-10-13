@@ -77,9 +77,20 @@ message AlterSourceResponse {
   uint64 version = 2;
 }
 
+message ReplaceTableChange {
+  catalog.Table table = 1;
+  // The new materialization plan, where all schema are updated.
+  stream_plan.StreamFragmentGraph fragment_graph = 2;
+  // The mapping from the old columns to the new columns of the table.
+  catalog.ColIndexMapping table_col_index_mapping = 3;
+  // Source catalog of table's associated source
+  catalog.Source source = 4;
+}
+
 message CreateSinkRequest {
   catalog.Sink sink = 1;
   stream_plan.StreamFragmentGraph fragment_graph = 2;
+  optional ReplaceTableChange target_table_change = 3;
 }
 
 message CreateSinkResponse {
@@ -91,6 +102,7 @@ message CreateSinkResponse {
 message DropSinkRequest {
   uint32 sink_id = 1;
   bool cascade = 2;
+  optional ReplaceTableChange target_table_change = 3;
 }
 
 message DropSinkResponse {

@@ -83,6 +83,7 @@ async fn do_handle_explain(
                             source_watermarks,
                             ColumnIdGenerator::new_initial(),
                             append_only,
+                            0,
                         )
                         .await?
                         .0
@@ -96,6 +97,7 @@ async fn do_handle_explain(
                             ColumnIdGenerator::new_initial(),
                             source_watermarks,
                             append_only,
+                            0,
                         )?
                         .0
                     }
@@ -133,7 +135,7 @@ async fn do_handle_explain(
                     .map(|x| x.0),
 
                     Statement::CreateSink { stmt } => {
-                        gen_sink_plan(&session, context.clone(), stmt).map(|x| x.1)
+                        gen_sink_plan(&session, context.clone(), stmt, None).map(|x| x.1)
                     }
 
                     Statement::CreateIndex {

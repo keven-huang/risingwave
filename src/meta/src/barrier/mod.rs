@@ -71,7 +71,7 @@ mod recovery;
 mod schedule;
 mod trace;
 
-pub use self::command::{Command, Reschedule};
+pub use self::command::{Command, ReplaceTableCommand, Reschedule};
 pub use self::schedule::BarrierScheduler;
 pub use self::trace::TracedEpoch;
 
@@ -142,6 +142,7 @@ pub enum CommandChanges {
         to_add: HashSet<ActorId>,
         to_remove: HashSet<ActorId>,
     },
+    Combined(Vec<CommandChanges>),
     /// No changes.
     None,
 }
@@ -266,7 +267,11 @@ impl CheckpointControl {
     /// created table and added actors into checkpoint control, so that `can_actor_send_or_collect`
     /// will return `true`.
     fn pre_resolve(&mut self, command: &Command) {
-        match command.changes() {
+        self.pre_resolve_helper(command.changes());
+    }
+
+    fn pre_resolve_helper(&mut self, changes: CommandChanges) {
+        match changes {
             CommandChanges::CreateTable(table) => {
                 assert!(
                     !self.dropping_tables.contains(&table),
@@ -286,6 +291,12 @@ impl CheckpointControl {
                 self.adding_actors.extend(to_add);
             }
 
+            CommandChanges::Combined(v) => {
+                for changes in v {
+                    self.pre_resolve_helper(changes);
+                }
+            }
+
             _ => {}
         }
     }
@@ -294,7 +305,11 @@ impl CheckpointControl {
     /// removed actors from checkpoint control, so that `can_actor_send_or_collect` will return
     /// `false`.
     fn post_resolve(&mut self, command: &Command) {
-        match command.changes() {
+        self.post_resolve_helper(command.changes());
+    }
+
+    fn post_resolve_helper(&mut self, change: CommandChanges) {
+        match change {
             CommandChanges::DropTables(tables) => {
                 assert!(
                     self.dropping_tables.is_disjoint(&tables),
@@ -310,7 +325,11 @@ impl CheckpointControl {
                 );
                 self.removing_actors.extend(to_remove);
             }
-
+            CommandChanges::Combined(v) => {
+                for changes in v {
+                    self.post_resolve_helper(changes);
+                }
+            }
             _ => {}
         }
     }
@@ -455,6 +474,11 @@ impl CheckpointControl {
                 self.removing_actors.retain(|a| !to_remove.contains(a));
             }
             CommandChanges::None => {}
+            CommandChanges::Combined(v) => {
+                for changes in v {
+                    self.remove_changes(changes);
+                }
+            }
         }
     }
 
