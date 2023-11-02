@@ -173,7 +173,7 @@ impl ExprVisitor for ImpureAnalyzer {
             | expr_node::Type::ArrayReplace
             | expr_node::Type::ArrayPosition
             | expr_node::Type::HexToInt256
-            | expr_node::Type::JsonbCat
+            | expr_node::Type::JsonbConcat
             | expr_node::Type::JsonbAccess
             | expr_node::Type::JsonbAccessStr
             | expr_node::Type::JsonbExtractPath
