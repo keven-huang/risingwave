@@ -274,6 +274,8 @@ impl StreamChunk {
     /// will be `[c, b, a]`. If `indices` is [2, 0], then the output will be `[c, a]`.
     /// If the input mapping is identity mapping, no reorder will be performed.
     pub fn project(&self, indices: &[usize]) -> Self {
+        println!("self is {}", self.to_pretty());
+        println!("indices is {:?}", indices);
         Self {
             ops: self.ops.clone(),
             data: self.data.project(indices),

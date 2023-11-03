@@ -181,7 +181,7 @@ pub async fn handle_alter_table_column(
         panic!("unexpected statement type: {:?}", definition);
     };
 
-    let (graph, table, source) = regenerate_table(
+    let (graph, table, source, _) = regenerate_table(
         &session,
         table_name,
         &original_catalog,

@@ -588,6 +588,19 @@ impl PlanRoot {
             dummy_source_node =
                 inject_project_for_generated_column_if_needed(&columns, dummy_source_node)?;
 
+            match kind {
+                PrimaryKeyKind::UserDefinedPrimaryKey => {
+                    dummy_source_node = RequiredDist::hash_shard(&pk_column_indices)
+                        .enforce_if_not_satisfies(dummy_source_node, &Order::any())?
+                }
+                PrimaryKeyKind::RowIdAsPrimaryKey => {
+                    dummy_source_node = StreamExchange::new_no_shuffle(dummy_source_node).into()
+                }
+                PrimaryKeyKind::AppendOnly => {
+                    dummy_source_node = StreamExchange::new_no_shuffle(dummy_source_node).into()
+                }
+            }
+
             union_inputs.push(dummy_source_node);
         }
 

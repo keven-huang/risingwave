@@ -666,14 +666,18 @@ impl DdlController {
 
         let table = table_stream_job.table().unwrap();
 
-        let xx = table
+        let output_indices = table
             .columns
             .iter()
             .enumerate()
+            .filter(|(a, b)| {
+                b.get_column_desc()
+                    .unwrap()
+                    .generated_or_default_column
+                    .is_none()
+            })
             .map(|(a, _b)| a as u32)
             .collect_vec();
-
-        // assert_eq!(fragment.actors.len(), sink_fragment.actors.len());
 
         println!("pairs {:?}", sink_to_merge);
 
@@ -685,7 +689,7 @@ impl DdlController {
                 vec![Dispatcher {
                     r#type: DispatcherType::NoShuffle as _,
                     dist_key_indices: vec![],
-                    output_indices: xx.clone(),
+                    output_indices: output_indices.clone(),
                     hash_mapping: None,
                     dispatcher_id: target_fragment_id.unwrap() as u64,
                     downstream_actor_id: vec![**downstream_actor_id],

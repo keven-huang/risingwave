@@ -131,7 +131,7 @@ pub async fn handle_drop_sink(
             panic!("unexpected statement type: {:?}", definition);
         };
 
-        let (graph, table, source) = regenerate_table(
+        let (graph, table, source, _) = regenerate_table(
             &session,
             table_name,
             &original_catalog,
