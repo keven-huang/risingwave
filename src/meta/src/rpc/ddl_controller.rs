@@ -670,7 +670,7 @@ impl DdlController {
             .columns
             .iter()
             .enumerate()
-            .filter(|(a, b)| {
+            .filter(|(_a, b)| {
                 b.get_column_desc()
                     .unwrap()
                     .generated_or_default_column

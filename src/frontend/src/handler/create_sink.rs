@@ -17,7 +17,6 @@ use std::rc::Rc;
 use std::sync::{Arc, LazyLock};
 
 use anyhow::Context;
-use fixedbitset::FixedBitSet;
 use itertools::Itertools;
 use maplit::{convert_args, hashmap};
 use pgwire::pg_response::{PgResponse, StatementType};
@@ -31,7 +30,7 @@ use risingwave_connector::sink::{
     CONNECTOR_TYPE_KEY, SINK_TYPE_OPTION, SINK_USER_FORCE_APPEND_ONLY_OPTION,
 };
 use risingwave_pb::catalog::{PbSource, Table};
-use risingwave_pb::ddl_service::ReplaceTableChange;
+use risingwave_pb::ddl_service::ReplaceTablePlan;
 use risingwave_pb::stream_plan::stream_fragment_graph::Parallelism;
 use risingwave_pb::stream_plan::stream_node::NodeBody;
 use risingwave_pb::stream_plan::stream_node::NodeBody::Merge;
@@ -53,10 +52,7 @@ use crate::handler::create_table::ColumnIdGenerator;
 use crate::handler::privilege::resolve_query_privileges;
 use crate::handler::HandlerArgs;
 use crate::optimizer::plan_node::generic::PhysicalPlanRef;
-use crate::optimizer::plan_node::{
-    generic, Explain, PlanTreeNodeUnary, StreamExchange, StreamProject,
-};
-use crate::optimizer::property::Distribution::{HashShard, SomeShard};
+use crate::optimizer::plan_node::{generic, Explain, PlanTreeNodeUnary, StreamProject};
 use crate::optimizer::property::{Distribution, Order, RequiredDist};
 use crate::optimizer::{OptimizerContext, OptimizerContextRef, PlanRef, RelationCollectorVisitor};
 use crate::scheduler::streaming_manager::CreatingStreamingJobInfo;
@@ -240,7 +236,7 @@ pub async fn handle_create_sink(
 
     let target_table = stmt.into_table_name.clone();
 
-    let mut target_table_change = None;
+    let mut affected_table_change = None;
     let mut table_dist = None;
     if let Some(table_name) = target_table {
         let db_name = session.database();
@@ -314,7 +310,7 @@ pub async fn handle_create_sink(
 
         fn modify_source_to_merge(node: &mut StreamNode) {
             let n2 = node.clone();
-            if let Some(NodeBody::Dml(d)) = &node.node_body {
+            if let Some(NodeBody::Dml(_d)) = &node.node_body {
                 return;
             }
 
@@ -390,7 +386,7 @@ pub async fn handle_create_sink(
             table.columns.len(),
         );
 
-        target_table_change = Some(ReplaceTableChange {
+        affected_table_change = Some(ReplaceTablePlan {
             source,
             table: Some(table.clone()),
             fragment_graph: Some(graph),
@@ -401,7 +397,7 @@ pub async fn handle_create_sink(
     let (sink, graph) = {
         let context = Rc::new(OptimizerContext::from_handler_args(handle_args));
 
-        let (query, plan, sink) = if let Some(x) = &target_table_change {
+        let (query, plan, sink) = if let Some(x) = &affected_table_change {
             let table1 = x.table.clone().unwrap();
 
             let (query, mut plan, sink) = gen_sink_plan(&session, context.clone(), stmt)?;
@@ -413,20 +409,6 @@ pub async fn handle_create_sink(
             for col in sink.full_columns() {
                 println!("col {:?} is gen {}", col, col.is_generated());
             }
-
-            // let sink = plan.as_stream_sink().unwrap();
-
-            // StreamSi    // let sink_plan: PlanRef = if let Some(idxes) = inject_exchange {
-            // //     let exchange = StreamExchange::new(sink_plan.input(), HashShard(idxes)).into();
-            // //     sink_plan.clone_with_input(exchange).into()
-            // // } else {
-            // //     sink_plan.into()
-            // // };
-
-            //            sink.input().
-            // sink.clone_with_input()
-            // RequiredDist::hash_shard(pk_column_indices)
-            //     .enforce_if_not_satisfies(dml_node, &Order::any())?
 
             #[derive(PartialEq, Debug, Copy, Clone)]
             enum PrimaryKeyKind {
@@ -501,7 +483,7 @@ pub async fn handle_create_sink(
                         })
                         .collect_vec();
 
-                    let sink_visable_columns = sink
+                    let sink_visible_columns = sink
                         .full_columns()
                         .iter()
                         .enumerate()
@@ -513,8 +495,8 @@ pub async fn handle_create_sink(
                             continue;
                         }
 
-                        if idx < sink_visable_columns.len() {
-                            let (sink_col_idx, sink_column) = sink_visable_columns[idx];
+                        if idx < sink_visible_columns.len() {
+                            let (sink_col_idx, sink_column) = sink_visible_columns[idx];
 
                             let sink_col_type = sink_column.data_type();
                             if data_type != sink_col_type {
@@ -558,7 +540,7 @@ pub async fn handle_create_sink(
 
         let mut graph = build_graph(plan);
 
-        if let Some(x) = &target_table_change {
+        if let Some(x) = &affected_table_change {
             graph.parallelism = x.fragment_graph.clone().unwrap().parallelism.clone();
         } else {
             graph.parallelism = session
@@ -583,7 +565,7 @@ pub async fn handle_create_sink(
 
     let catalog_writer = session.catalog_writer()?;
     catalog_writer
-        .create_sink(sink.to_proto(), graph, target_table_change)
+        .create_sink(sink.to_proto(), graph, affected_table_change)
         .await?;
 
     Ok(PgResponse::empty_result(StatementType::CREATE_SINK))

@@ -252,10 +252,9 @@ impl DdlService for DdlServiceImpl {
 
         let req = request.into_inner();
 
-        // println!("req {:#?}", req);
         let sink = req.get_sink()?.clone();
         let fragment_graph = req.get_fragment_graph()?.clone();
-        let target_table_change = req.get_target_table_change().cloned().ok();
+        let affected_table_change = req.get_affected_table_change().cloned().ok();
 
         // validate connection before starting the DDL procedure
         if let Some(connection_id) = sink.connection_id {
@@ -267,7 +266,7 @@ impl DdlService for DdlServiceImpl {
 
         stream_job.set_id(id);
 
-        let command = if let Some(change) = target_table_change {
+        let command = if let Some(change) = affected_table_change {
             let info = {
                 let mut source = change.source;
                 let mut fragment_graph = change.fragment_graph.unwrap();
@@ -317,9 +316,7 @@ impl DdlService for DdlServiceImpl {
         let sink_id = request.sink_id;
         let drop_mode = DropMode::from_request_setting(request.cascade);
 
-        let change = request.target_table_change;
-
-        let command = if let Some(change) = change {
+        let command = if let Some(change) = request.affected_table_change {
             let info = {
                 let mut source = change.source;
                 let mut fragment_graph = change.fragment_graph.unwrap();
@@ -331,6 +328,7 @@ impl DdlService for DdlServiceImpl {
                     let table_id = table.id;
                     fill_table_source(source, source_id, &mut table, table_id, &mut fragment_graph);
                 }
+
                 let table_col_index_mapping =
                     ColIndexMapping::from_protobuf(&change.table_col_index_mapping.unwrap());
                 let stream_job = StreamingJob::Table(source, table, TableJobType::General);
@@ -631,7 +629,7 @@ impl DdlService for DdlServiceImpl {
         &self,
         request: Request<ReplaceTablePlanRequest>,
     ) -> Result<Response<ReplaceTablePlanResponse>, Status> {
-        let req = request.into_inner();
+        let req = request.into_inner().get_plan().cloned()?;
 
         let mut source = req.source;
         let mut fragment_graph = req.fragment_graph.unwrap();

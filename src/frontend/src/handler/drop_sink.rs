@@ -14,7 +14,7 @@
 
 use pgwire::pg_response::{PgResponse, StatementType};
 use risingwave_common::error::Result;
-use risingwave_pb::ddl_service::ReplaceTableChange;
+use risingwave_pb::ddl_service::ReplaceTablePlan;
 use risingwave_sqlparser::ast::ObjectName;
 
 use super::RwPgResponse;
@@ -59,7 +59,7 @@ pub async fn handle_drop_sink(
 
     let sink_id = sink.id;
 
-    let mut target_table_change = None;
+    let mut affected_table_change = None;
     if let Some(target_table_name) = &sink.sink_into_name {
         use anyhow::Context;
         use risingwave_common::error::{ErrorCode, RwError};
@@ -160,7 +160,7 @@ pub async fn handle_drop_sink(
             table.columns.len(),
         );
 
-        target_table_change = Some(ReplaceTableChange {
+        affected_table_change = Some(ReplaceTablePlan {
             source,
             table: Some(table),
             fragment_graph: Some(graph),
@@ -170,7 +170,7 @@ pub async fn handle_drop_sink(
 
     let catalog_writer = session.catalog_writer()?;
     catalog_writer
-        .drop_sink(sink_id.sink_id, cascade, target_table_change)
+        .drop_sink(sink_id.sink_id, cascade, affected_table_change)
         .await?;
 
     Ok(PgResponse::empty_result(StatementType::DROP_SINK))

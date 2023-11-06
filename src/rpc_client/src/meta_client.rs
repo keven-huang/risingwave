@@ -387,12 +387,12 @@ impl MetaClient {
         &self,
         sink: PbSink,
         graph: StreamFragmentGraph,
-        target_table_change: Option<ReplaceTableChange>,
+        affected_table_change: Option<ReplaceTablePlan>,
     ) -> Result<(u32, CatalogVersion)> {
         let request = CreateSinkRequest {
             sink: Some(sink),
             fragment_graph: Some(graph),
-            target_table_change,
+            affected_table_change,
         };
 
         let resp = self.inner.create_sink(request).await?;
@@ -466,10 +466,12 @@ impl MetaClient {
         table_col_index_mapping: ColIndexMapping,
     ) -> Result<CatalogVersion> {
         let request = ReplaceTablePlanRequest {
-            source,
-            table: Some(table),
-            fragment_graph: Some(graph),
-            table_col_index_mapping: Some(table_col_index_mapping.to_protobuf()),
+            plan: Some(ReplaceTablePlan {
+                source,
+                table: Some(table),
+                fragment_graph: Some(graph),
+                table_col_index_mapping: Some(table_col_index_mapping.to_protobuf()),
+            }),
         };
         let resp = self.inner.replace_table_plan(request).await?;
         // TODO: handle error in `resp.status` here
@@ -531,12 +533,12 @@ impl MetaClient {
         &self,
         sink_id: u32,
         cascade: bool,
-        target_table_change: Option<ReplaceTableChange>,
+        affected_table_change: Option<ReplaceTablePlan>,
     ) -> Result<CatalogVersion> {
         let request = DropSinkRequest {
             sink_id,
             cascade,
-            target_table_change,
+            affected_table_change,
         };
         let resp = self.inner.drop_sink(request).await?;
         Ok(resp.version)
