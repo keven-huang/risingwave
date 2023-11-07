@@ -14,7 +14,7 @@
 
 use std::cmp::Ordering::{Equal, Less};
 use std::future::Future;
-use std::ops::Bound::*;
+// use std::ops::Bound::*;
 use std::sync::Arc;
 
 use risingwave_hummock_sdk::key::FullKey;
@@ -71,37 +71,37 @@ impl SstableIterator {
         }
     }
 
-    async fn init_block_fetcher(&mut self, start_idx: usize) -> HummockResult<()> {
-        if let Some(bound) = self.options.must_iterated_end_user_key.as_ref() {
-            let block_metas = &self.sst.value().meta.block_metas;
-            let next_to_start_idx = start_idx + 1;
-            if next_to_start_idx < block_metas.len() {
-                let end_idx = match bound {
-                    Unbounded => block_metas.len(),
-                    Included(dest_key) => {
-                        let dest_key = dest_key.as_ref();
-                        block_metas.partition_point(|block_meta| {
-                            FullKey::decode(&block_meta.smallest_key).user_key <= dest_key
-                        })
-                    }
-                    Excluded(end_key) => {
-                        let end_key = end_key.as_ref();
-                        block_metas.partition_point(|block_meta| {
-                            FullKey::decode(&block_meta.smallest_key).user_key < end_key
-                        })
-                    }
-                };
-                if start_idx + 1 < end_idx {
-                    self.preload_stream = self
-                        .sstable_store
-                        .preload_blocks(self.sst.value(), start_idx, end_idx)
-                        .await?;
-                    self.preload_end_block_idx = end_idx;
-                }
-            }
-        }
-        Ok(())
-    }
+    // async fn init_block_fetcher(&mut self, start_idx: usize) -> HummockResult<()> {
+    //     if let Some(bound) = self.options.must_iterated_end_user_key.as_ref() {
+    //         let block_metas = &self.sst.value().meta.block_metas;
+    //         let next_to_start_idx = start_idx + 1;
+    //         if next_to_start_idx < block_metas.len() {
+    //             let end_idx = match bound {
+    //                 Unbounded => block_metas.len(),
+    //                 Included(dest_key) => {
+    //                     let dest_key = dest_key.as_ref();
+    //                     block_metas.partition_point(|block_meta| {
+    //                         FullKey::decode(&block_meta.smallest_key).user_key <= dest_key
+    //                     })
+    //                 }
+    //                 Excluded(end_key) => {
+    //                     let end_key = end_key.as_ref();
+    //                     block_metas.partition_point(|block_meta| {
+    //                         FullKey::decode(&block_meta.smallest_key).user_key < end_key
+    //                     })
+    //                 }
+    //             };
+    //             if start_idx + 1 < end_idx {
+    //                 self.preload_stream = self
+    //                     .sstable_store
+    //                     .preload_blocks(self.sst.value(), start_idx, end_idx)
+    //                     .await?;
+    //                 self.preload_end_block_idx = end_idx;
+    //             }
+    //         }
+    //     }
+    //     Ok(())
+    // }
 
     pub(crate) fn sst(&self) -> &TableHolder {
         &self.sst
@@ -244,7 +244,7 @@ impl HummockIterator for SstableIterator {
 
     fn rewind(&mut self) -> Self::RewindFuture<'_> {
         async move {
-            self.init_block_fetcher(0).await?;
+            // self.init_block_fetcher(0).await?;
             self.seek_idx(0, None).await?;
             Ok(())
         }
@@ -265,7 +265,7 @@ impl HummockIterator for SstableIterator {
                     ord == Less || ord == Equal
                 })
                 .saturating_sub(1); // considering the boundary of 0
-            self.init_block_fetcher(block_idx).await?;
+                                    // self.init_block_fetcher(block_idx).await?;
 
             self.seek_idx(block_idx, Some(key)).await?;
             if !self.is_valid() {
